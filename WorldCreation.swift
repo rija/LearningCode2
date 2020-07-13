@@ -5,37 +5,110 @@
 
 let grid = world.allPossibleCoordinates
 let rowSize = world.coordinates(inColumns: [0]).count
-assert(rowSize == 12,"Row size is 12")
+let columnSize = world.coordinates(inRows: [0]).count
 
-// heights array for the valley and river
-var heightmap: [Int] = []
-heightmap +=  [5,4,3,2,1,0,0,1,2,3,4,4]
-heightmap +=  [5,4,3,2,1,0,0,1,2,3,4,5]
-heightmap +=  [6,5,4,3,2,1,0,0,1,2,3,6]
-heightmap +=  [5,4,3,2,1,1,2,0,0,3,4,7]
-heightmap +=  [5,4,3,2,1,1,0,0,3,4,7,7]
-heightmap +=  [6,4,3,2,1,0,0,1,2,3,4,7]
-heightmap +=  [7,4,3,2,1,0,0,1,2,3,4,7]
-heightmap +=  [8,4,3,2,1,1,0,0,2,3,4,7]
-heightmap +=  [7,4,3,2,1,1,1,0,0,3,4,7]
-heightmap +=  [6,4,3,2,1,0,0,0,0,0,4,6]
-heightmap +=  [6,4,3,2,1,0,0,0,0,0,3,5]
-heightmap +=  [5,4,3,2,1,0,0,0,1,2,3,4]
 
-func makeValley() {
+
+struct HeightMap {
+    let rows: Int, columns: Int
+    var grid: [Int]
+    let defaultHeight = 0
     
-    for eachCoordinate in grid {
-        if heightmap[eachCoordinate.row*rowSize+eachCoordinate.column] == 0 {
-            world.removeAllBlocks(at: eachCoordinate)
-            world.place(Water(), at: eachCoordinate)
+    init(rows: Int, columns: Int) {
+        self.rows = rows
+        self.columns = columns
+        grid = Array(repeating: defaultHeight, count: rows * columns)
+    }
+    
+    func indexIsValid(row: Int, column: Int) -> Bool {
+        return row >= 0 && row < rows && column >= 0 && column < columns
+    }
+    
+    subscript(row: Int, column: Int) -> Int {
+        get {
+            assert(indexIsValid(row: row, column: column), "Index out of range")
+            return grid[(row * columns) + column]
+        }
+        set {
+            assert(indexIsValid(row: row, column: column), "Index out of range")
+            grid[(row * columns) + column] = newValue
+        }
+    }
+    
+    var floor: Int {
+        grid.min() ?? defaultHeight
+    }
+    
+    var peak: Int {
+        grid.max() ?? defaultHeight
+    }
+    
+    func ascent(from pos1: Coordinate, to pos2: Coordinate) -> Int {
+    
+        assert(indexIsValid(row: pos1.row, column: pos1.column), "Index out of range for pos1")
+        assert(indexIsValid(row: pos2.row, column: pos2.column), "Index out of range for pos2")
+        
+        return grid[pos2.row*rows+pos2.column] - grid[pos1.row*rows+pos1.column]
+    }
+    
+    func isNorthEdge(at pos: Coordinate) -> Bool {
+        assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos")
+        
+        return pos.row == (rows - 1 )
+    } 
+    
+    func isSouthEdge(at pos: Coordinate) -> Bool {
+        assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos")
+        
+        return pos.row == 0
+    } 
+    
+    func isWestEdge(at pos: Coordinate) -> Bool {
+        assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos")
+        
+        return pos.column == 0
+    }
+    
+    func isEastEdge(at pos: Coordinate) -> Bool {
+        assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos")
+        
+        return pos.column == (columns - 1)
+    }        
+    
+    func isFloor(at pos: Coordinate) -> Bool {
+        return grid[pos.row*rows+pos.column] == grid.min()
+    }
+}
+
+func makeValley(grid: [Coordinate], heights: HeightMap) {
+    
+    for pos in grid {
+        if heights.isFloor(at: pos) {
+            world.removeAllBlocks(at: pos)
+            world.place(Water(), at: pos)
         }
         else {
-            for eachLevel in 0 ... heightmap[eachCoordinate.row*rowSize+eachCoordinate.column] {
-                world.place(Block(), at: eachCoordinate)
+            for eachLevel in heights.floor ... heights[pos.row, pos.column] {
+                world.place(Block(), at: pos)
             } 
         }
     }
     
 }
 
-makeValley()
+var hmap = HeightMap(rows: rowSize, columns: columnSize)
+hmap.grid =   [5,4,3,2,1,0,0,1,2,3,4,4]
+hmap.grid +=  [5,4,3,2,1,0,0,1,2,3,4,5]
+hmap.grid +=  [6,5,4,3,2,1,0,0,1,2,3,6]
+hmap.grid +=  [5,4,3,2,1,1,2,0,0,3,4,7]
+hmap.grid +=  [5,4,3,2,1,1,0,0,3,4,7,7]
+hmap.grid +=  [6,4,3,2,1,0,0,1,2,3,4,7]
+hmap.grid +=  [7,4,3,2,1,0,0,1,2,3,4,7]
+hmap.grid +=  [8,4,3,2,1,1,0,0,2,3,4,7]
+hmap.grid +=  [7,4,3,2,1,1,1,0,0,3,4,7]
+hmap.grid +=  [6,4,3,2,1,0,0,0,0,0,4,6]
+hmap.grid +=  [6,4,3,2,1,0,0,0,0,0,3,5]
+hmap.grid +=  [5,4,3,2,1,0,0,0,1,2,3,4]
+
+
+makeValley(grid: grid,heights: hmap)
