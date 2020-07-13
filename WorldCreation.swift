@@ -95,6 +95,19 @@ struct Scout {
         world.place(self.ask, facing: self.orientation, at: self.position)
     }
     
+    func aim(step: Int, facing: Direction) -> Coordinate {
+        switch facing {
+            case .north:
+                return Coordinate(column: self.position.column, row: self.position.row + step)
+            case .east:
+                return Coordinate(column: self.position.column + step, row: self.position.row)
+            case .south:
+                return Coordinate(column: self.position.column, row: self.position.row - step)
+            case .west:
+                return Coordinate(column: self.position.column - step, row: self.position.row)                                
+        }
+    }
+    
     mutating func leap() {
         self.position = Coordinate(column:self.position.column, row: self.position.row+1)
         self.ask.jump()
@@ -113,6 +126,58 @@ struct Scout {
         }
         self.ask.turnRight()
     }
+    
+    mutating func turnLeft() {
+        switch self.orientation {
+            case .north:
+                self.orientation = .west
+            case .east:
+                self.orientation = .north
+            case .south:
+                self.orientation = .east
+            case .west:
+                self.orientation = .south
+        }
+        self.ask.turnLeft()
+    }
+    
+    func isReallyBlocked(heights: HeightMap) -> Bool {
+        let oneLevel = 1
+        switch self.orientation {
+            case .north:
+                if heights.isNorthEdge(at: self.position) 
+                || abs(heights.ascent(from: self.position, to: self.aim(step:1,facing: .north) )) > oneLevel {
+                    return true
+                } 
+                else {
+                    return false
+                }
+            case .east:
+                if heights.isEastEdge(at: self.position) 
+                || abs(heights.ascent(from: self.position, to: self.aim(step:1,facing: .east) )) > oneLevel {
+                    return true
+                }
+                else {
+                    return false
+                }
+            case .south:
+                if heights.isSouthEdge(at: self.position) 
+                || abs(heights.ascent(from: self.position, to: self.aim(step:1,facing: .south) )) > oneLevel {
+                    return true
+                } 
+                else {
+                    return false
+                }
+            case .west:
+                if heights.isWestEdge(at: self.position) 
+                || abs(heights.ascent(from: self.position, to: self.aim(step:1,facing: .east) )) > oneLevel {
+                    return true
+                }
+                else {
+                    return false
+                }                                                 
+        }
+    }    
 }
 
 
@@ -167,3 +232,10 @@ assert(buddy.position.row == 1 && buddy.position.column == 0, "buddy jump forwar
 
 buddy.turnRight()
 assert(buddy.orientation == .east, "buddy turn right eastward")
+
+buddy.turnLeft()
+assert(buddy.orientation == .north, "buddy facing north")
+buddy.turnLeft()
+assert(buddy.orientation == .west, "buddy facing west")
+assert(hmap.isWestEdge(at: buddy.position), "buddy is at the western edge of the map")
+assert(buddy.isReallyBlocked(heights:hmap), "buddy is front blocked")
