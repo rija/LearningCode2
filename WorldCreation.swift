@@ -8,6 +8,9 @@ let rowSize = world.coordinates(inColumns: [0]).count
 let columnSize = world.coordinates(inRows: [0]).count
 
 
+enum Horizon {
+    case forward, left, right
+}
 
 struct HeightMap {
     let rows: Int, columns: Int
@@ -84,11 +87,13 @@ struct Scout {
     var ask: Character
     var position: Coordinate
     var orientation: Direction
+    var heights: HeightMap
     
-    init(char: Character, at origin: Coordinate, facing: Direction) {
+    init(char: Character, at origin: Coordinate, facing: Direction, knowing: HeightMap) {
         self.ask = char
         self.position = origin
         self.orientation = facing
+        self.heights = knowing
     }
     
     func materialize() {
@@ -105,6 +110,52 @@ struct Scout {
                 return Coordinate(column: self.position.column, row: self.position.row - step)
             case .west:
                 return Coordinate(column: self.position.column - step, row: self.position.row)                                
+        }
+    }
+    
+    func gaze(at view: Horizon) -> Direction {
+        switch self.orientation {
+            case .north:
+                if view == .left {
+                    return .west
+                }
+                else if view == .right {
+                    return .east
+                }
+                else {
+                    return .north
+                }
+            case .east:
+                if view == .left {
+                    return .north
+                }
+                else if view == .right {
+                    return .south
+                }
+                else {
+                    return .east
+                }
+            case .south:
+                
+                if view == .left {
+                    return .east
+                }
+                else if view == .right {
+                    return .west
+                }
+                else {
+                    return .south
+                }
+            case .west:
+                if view == .left {
+                    return .south
+                }
+                else if view == .right {
+                    return .north
+                }
+                else {
+                    return .west
+                }                                
         }
     }
     
@@ -141,41 +192,33 @@ struct Scout {
         self.ask.turnLeft()
     }
     
-    func isReallyBlocked(heights: HeightMap) -> Bool {
+    func isReallyBlocked(looking theView: Horizon) -> Bool {
         let oneLevel = 1
         switch self.orientation {
             case .north:
                 if heights.isNorthEdge(at: self.position) 
-                || abs(heights.ascent(from: self.position, to: self.aim(step:1,facing: .north) )) > oneLevel {
+                || abs(heights.ascent(from: self.position, to: self.aim(step:1,facing: gaze(at: theView)) )) > oneLevel {
                     return true
                 } 
-                else {
-                    return false
-                }
+                return false
             case .east:
                 if heights.isEastEdge(at: self.position) 
-                || abs(heights.ascent(from: self.position, to: self.aim(step:1,facing: .east) )) > oneLevel {
+                || abs(heights.ascent(from: self.position, to: self.aim(step:1,facing: gaze(at: theView)) )) > oneLevel {
                     return true
                 }
-                else {
-                    return false
-                }
+                return false
             case .south:
                 if heights.isSouthEdge(at: self.position) 
-                || abs(heights.ascent(from: self.position, to: self.aim(step:1,facing: .south) )) > oneLevel {
+                || abs(heights.ascent(from: self.position, to: self.aim(step:1,facing: gaze(at: theView)) )) > oneLevel {
                     return true
                 } 
-                else {
-                    return false
-                }
+                return false
             case .west:
                 if heights.isWestEdge(at: self.position) 
-                || abs(heights.ascent(from: self.position, to: self.aim(step:1,facing: .east) )) > oneLevel {
+                || abs(heights.ascent(from: self.position, to: self.aim(step:1,facing: gaze(at: theView)) )) > oneLevel {
                     return true
                 }
-                else {
-                    return false
-                }                                                 
+                return false                                                 
         }
     }    
 }
@@ -219,7 +262,7 @@ hmap.grid +=  [5,4,3,2,1,0,0,0,1,2,3,4]
 
 makeValley(grid: grid,heights: hmap)
 
-var buddy = Scout(char: Character(name: .byte), at: Coordinate(column: 0, row: 0), facing: .north)
+var buddy = Scout(char: Character(name: .byte), at: Coordinate(column: 0, row: 0), facing: .north, knowing:hmap)
 
 
 // unit tests
@@ -238,4 +281,11 @@ assert(buddy.orientation == .north, "buddy facing north")
 buddy.turnLeft()
 assert(buddy.orientation == .west, "buddy facing west")
 assert(hmap.isWestEdge(at: buddy.position), "buddy is at the western edge of the map")
-assert(buddy.isReallyBlocked(heights:hmap), "buddy is front blocked")
+assert(buddy.isReallyBlocked(looking: .forward), "buddy is front blocked")
+
+//play
+
+buddy.turnRight()
+while !buddy.isReallyBlocked(looking: .forward) {
+    buddy.leap()    
+}
