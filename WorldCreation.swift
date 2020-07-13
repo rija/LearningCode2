@@ -80,6 +80,22 @@ struct HeightMap {
     }
 }
 
+struct Scout {
+    var ask: Character
+    var position: Coordinate
+    var orientation: Direction
+    
+    init(char: Character, at origin: Coordinate, facing: Direction) {
+        self.ask = char
+        self.position = origin
+        self.orientation = facing
+    }
+    
+    func materialize() {
+        world.place(self.ask, facing: self.orientation, at: self.position)
+    }
+}
+
 func makeValley(grid: [Coordinate], heights: HeightMap) {
     
     for pos in grid {
@@ -112,3 +128,6 @@ hmap.grid +=  [5,4,3,2,1,0,0,0,1,2,3,4]
 
 
 makeValley(grid: grid,heights: hmap)
+
+var buddy = Scout(char: Character(name: .byte), at: Coordinate(row: 0, column: 0), facing: .north)
+buddy.materialize()
