@@ -53,30 +53,24 @@ struct HeightMap {
         
         return grid[pos2.row*rows+pos2.column] - grid[pos1.row*rows+pos1.column]
     }
-    
-    func isNorthEdge(at pos: Coordinate) -> Bool {
-        assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos")
-        
-        return pos.row == (rows - 1 )
+                
+    func isOnEdge(of side: Direction, at pos: Coordinate) -> Bool {
+        switch side {
+            case .north:
+                assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos")
+                return pos.row == (rows - 1 )
+            case .east:
+                assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos")
+                return pos.column == (columns - 1)
+            case .south:
+                assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos")
+                return pos.row == 0
+            case .west:
+                assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos")
+                return pos.column == 0
+            
+        }
     } 
-    
-    func isSouthEdge(at pos: Coordinate) -> Bool {
-        assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos")
-        
-        return pos.row == 0
-    } 
-    
-    func isWestEdge(at pos: Coordinate) -> Bool {
-        assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos")
-        
-        return pos.column == 0
-    }
-    
-    func isEastEdge(at pos: Coordinate) -> Bool {
-        assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos")
-        
-        return pos.column == (columns - 1)
-    }        
     
     func isFloor(at pos: Coordinate) -> Bool {
         return grid[pos.row*rows+pos.column] == grid.min()
@@ -194,32 +188,14 @@ struct Scout {
     
     func isReallyBlocked(looking theView: Horizon) -> Bool {
         let oneLevel = 1
-        switch self.orientation {
-            case .north:
-                if heights.isNorthEdge(at: self.position) 
-                || abs(heights.ascent(from: self.position, to: self.aim(step:1,facing: gaze(at: theView)) )) > oneLevel {
-                    return true
-                } 
-                return false
-            case .east:
-                if heights.isEastEdge(at: self.position) 
-                || abs(heights.ascent(from: self.position, to: self.aim(step:1,facing: gaze(at: theView)) )) > oneLevel {
-                    return true
-                }
-                return false
-            case .south:
-                if heights.isSouthEdge(at: self.position) 
-                || abs(heights.ascent(from: self.position, to: self.aim(step:1,facing: gaze(at: theView)) )) > oneLevel {
-                    return true
-                } 
-                return false
-            case .west:
-                if heights.isWestEdge(at: self.position) 
-                || abs(heights.ascent(from: self.position, to: self.aim(step:1,facing: gaze(at: theView)) )) > oneLevel {
-                    return true
-                }
-                return false                                                 
+        let gazingDirection = gaze(at: theView)
+        if heights.isOnEdge(of: gaze(at: theView), at: self.position) {
+            return true
         }
+        else if abs(heights.ascent(from: self.position, to: aim(step:1,facing: gazingDirection) )) > oneLevel {
+            return true
+        }
+        return false        
     }    
 }
 
@@ -272,15 +248,18 @@ assert(buddy.orientation == .north, "buddy facing north")
 
 buddy.leap()
 assert(buddy.position.row == 1 && buddy.position.column == 0, "buddy jump forward northbound")
+assert(!buddy.isReallyBlocked(looking: .right), "buddy is not right blocked")
+assert(buddy.isReallyBlocked(looking: .left), "buddy is left blocked")
 
 buddy.turnRight()
 assert(buddy.orientation == .east, "buddy turn right eastward")
+
 
 buddy.turnLeft()
 assert(buddy.orientation == .north, "buddy facing north")
 buddy.turnLeft()
 assert(buddy.orientation == .west, "buddy facing west")
-assert(hmap.isWestEdge(at: buddy.position), "buddy is at the western edge of the map")
+assert(hmap.isOnEdge(of: .west, at: buddy.position), "buddy is at the western edge of the map")
 assert(buddy.isReallyBlocked(looking: .forward), "buddy is front blocked")
 
 //play
