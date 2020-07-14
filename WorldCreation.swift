@@ -57,16 +57,16 @@ struct HeightMap {
     func isOnEdge(of side: Direction, at pos: Coordinate) -> Bool {
         switch side {
             case .north:
-                assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos")
+                assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos( \(pos.column), \(pos.row) ) and direction '.north'")           
                 return pos.row == (rows - 1 )
             case .east:
-                assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos")
+            assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos( \(pos.column), \(pos.row) ) and direction '.east'")
                 return pos.column == (columns - 1)
             case .south:
-                assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos")
+                assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos( \(pos.column), \(pos.row) ) and direction '.south'")            
                 return pos.row == 0
             case .west:
-                assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos")
+            assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos( \(pos.column), \(pos.row) ) and direction '.west'")
                 return pos.column == 0
             
         }
@@ -154,7 +154,8 @@ struct Scout {
     }
     
     mutating func leap() {
-        self.position = Coordinate(column:self.position.column, row: self.position.row+1)
+        self.position = aim(step:1, facing: orientation)
+                assert(heights.indexIsValid(row: position.row, column: position.column), "Leap(): Index out of range for pos( \(position.column), \(position.row) )")
         self.ask.jump()
     }
     
@@ -189,15 +190,28 @@ struct Scout {
     func isReallyBlocked(looking theView: Horizon) -> Bool {
         let oneLevel = 1
         let gazingDirection = gaze(at: theView)
-        if heights.isOnEdge(of: gaze(at: theView), at: self.position) {
+        if heights.isOnEdge(of: gazingDirection, at: self.position) {
             return true
         }
         else if abs(heights.ascent(from: self.position, to: aim(step:1,facing: gazingDirection) )) > oneLevel {
             return true
         }
         return false        
-    }    
-}
+    }
+    
+    mutating func jumpAlongTheRightSide() {
+        if isReallyBlocked(looking: .forward) && isReallyBlocked(looking: .right) {
+            turnLeft()
+        }
+        else if isReallyBlocked(looking: .right) {
+            leap()
+        }
+        else {
+            turnRight()
+            leap()
+        }
+    }
+} // end struct Scout
 
 
 
@@ -262,9 +276,22 @@ assert(buddy.orientation == .west, "buddy facing west")
 assert(hmap.isOnEdge(of: .west, at: buddy.position), "buddy is at the western edge of the map")
 assert(buddy.isReallyBlocked(looking: .forward), "buddy is front blocked")
 
-//play
+// testing adapted right-hand rule algorithm
 
 buddy.turnRight()
-while !buddy.isReallyBlocked(looking: .forward) {
-    buddy.leap()    
-}
+buddy.leap()
+buddy.turnRight()
+buddy.leap()
+buddy.turnRight()
+buddy.leap()
+buddy.leap()
+assert(buddy.orientation == .south, "buddy is facing south")
+assert(buddy.position.column == 1 && buddy.position.row == 0, "expect (\(buddy.position.column),\(buddy.position.row)) to be (1,0)")
+assert(buddy.isReallyBlocked(looking: .forward), "buddy is front blocked")
+assert(!buddy.isReallyBlocked(looking: .left), "buddy is not blocked on the left")
+assert(!buddy.isReallyBlocked(looking: .right), "buddy is not blocked on the right")
+
+buddy.jumpAlongTheRightSide()    
+buddy.turnRight()
+assert(buddy.position.column == 0 && buddy.position.row == 0, "expect (\(buddy.position.column),\(buddy.position.row)) to be (0,0)")
+
