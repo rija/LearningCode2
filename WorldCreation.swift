@@ -54,7 +54,7 @@ struct HeightMap {
         return grid[pos2.row*rows+pos2.column] - grid[pos1.row*rows+pos1.column]
     }
                 
-    func isOnEdge(of side: Direction, at pos: Coordinate) -> Bool {
+    func isOnWorldEdge(of side: Direction, at pos: Coordinate) -> Bool {
         switch side {
             case .north:
                 assert(indexIsValid(row: pos.row, column: pos.column), "Index out of range for pos( \(pos.column), \(pos.row) ) and direction '.north'")           
@@ -72,7 +72,9 @@ struct HeightMap {
         }
     } 
     
-    func isFloor(at pos: Coordinate) -> Bool {
+    
+    
+    func isAtSeaLevel(at pos: Coordinate) -> Bool {
         return grid[pos.row*rows+pos.column] == grid.min()
     }
 }
@@ -190,7 +192,10 @@ struct Scout {
     func isReallyBlocked(looking theView: Horizon) -> Bool {
         let oneLevel = 1
         let gazingDirection = gaze(at: theView)
-        if heights.isOnEdge(of: gazingDirection, at: self.position) {
+        if heights.isOnWorldEdge(of: gazingDirection, at: self.position) {
+            return true
+        }
+        else if heights.isAtSeaLevel(at: aim(step:1,facing: gazingDirection)) {
             return true
         }
         else if abs(heights.ascent(from: self.position, to: aim(step:1,facing: gazingDirection) )) > oneLevel {
@@ -218,7 +223,7 @@ struct Scout {
 func makeValley(grid: [Coordinate], heights: HeightMap) {
     
     for pos in grid {
-        if heights.isFloor(at: pos) {
+        if heights.isAtSeaLevel(at: pos) {
             world.removeAllBlocks(at: pos)
             world.place(Water(), at: pos)
         }
@@ -273,7 +278,7 @@ buddy.turnLeft()
 assert(buddy.orientation == .north, "buddy facing north")
 buddy.turnLeft()
 assert(buddy.orientation == .west, "buddy facing west")
-assert(hmap.isOnEdge(of: .west, at: buddy.position), "buddy is at the western edge of the map")
+assert(hmap.isOnWorldEdge(of: .west, at: buddy.position), "buddy is at the western edge of the map")
 assert(buddy.isReallyBlocked(looking: .forward), "buddy is front blocked")
 
 // testing adapted right-hand rule algorithm
@@ -295,3 +300,26 @@ buddy.jumpAlongTheRightSide()
 buddy.turnRight()
 assert(buddy.position.column == 0 && buddy.position.row == 0, "expect (\(buddy.position.column),\(buddy.position.row)) to be (0,0)")
 
+buddy.turnLeft()
+buddy.turnLeft()
+
+for eachStep in 1 ... 4 {
+    buddy.jumpAlongTheRightSide()    
+}
+
+assert(buddy.position.column == 3, "buddy is on column 3")
+assert(buddy.position.row == 0, "buddy is on row 0")
+assert(buddy.orientation == .east, "buddy is facing east")
+assert(!buddy.isReallyBlocked(looking: .forward), "buddy is not front blocked")
+assert(buddy.isReallyBlocked(looking: .right), "buddy is blocked on the right")
+
+buddy.jumpAlongTheRightSide()
+
+assert(buddy.position.column == 4, "buddy is on column 4")
+assert(buddy.position.row == 0, "buddy is on row 0")
+assert(buddy.orientation == .east, "buddy is facing east")
+let gradient = hmap.ascent(from: buddy.position, to: buddy.aim(step:1,facing: .east) )
+assert(  abs(gradient) == 1, "ascent should be 1, not \(gradient)")
+
+assert(buddy.isReallyBlocked(looking: .forward), "buddy is front blocked")
+assert(buddy.isReallyBlocked(looking: .right), "buddy is blocked on the right")
