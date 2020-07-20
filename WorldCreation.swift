@@ -303,23 +303,24 @@ assert(buddy.position.column == 0 && buddy.position.row == 0, "expect (\(buddy.p
 buddy.turnLeft()
 buddy.turnLeft()
 
-for eachStep in 1 ... 4 {
+while true {
     buddy.jumpAlongTheRightSide()    
 }
 
-assert(buddy.position.column == 3, "buddy is on column 3")
-assert(buddy.position.row == 0, "buddy is on row 0")
-assert(buddy.orientation == .east, "buddy is facing east")
-assert(!buddy.isReallyBlocked(looking: .forward), "buddy is not front blocked")
-assert(buddy.isReallyBlocked(looking: .right), "buddy is blocked on the right")
+// assertions after 4 steps
+// assert(buddy.position.column == 3, "buddy is on column 3")
+// assert(buddy.position.row == 0, "buddy is on row 0")
+// assert(buddy.orientation == .east, "buddy is facing east")
+// assert(!buddy.isReallyBlocked(looking: .forward), "buddy is not front blocked")
+// assert(buddy.isReallyBlocked(looking: .right), "buddy is blocked on the right")
 
-buddy.jumpAlongTheRightSide()
+// buddy.jumpAlongTheRightSide()
 
-assert(buddy.position.column == 4, "buddy is on column 4")
-assert(buddy.position.row == 0, "buddy is on row 0")
-assert(buddy.orientation == .east, "buddy is facing east")
-let gradient = hmap.ascent(from: buddy.position, to: buddy.aim(step:1,facing: .east) )
-assert(  abs(gradient) == 1, "ascent should be 1, not \(gradient)")
+// assert(buddy.position.column == 4, "buddy is on column 4")
+// assert(buddy.position.row == 0, "buddy is on row 0")
+// assert(buddy.orientation == .east, "buddy is facing east")
+// let gradient = hmap.ascent(from: buddy.position, to: buddy.aim(step:1,facing: .east) )
+// assert(  abs(gradient) == 1, "ascent should be 1, not \(gradient)")
 
-assert(buddy.isReallyBlocked(looking: .forward), "buddy is front blocked")
-assert(buddy.isReallyBlocked(looking: .right), "buddy is blocked on the right")
+// assert(buddy.isReallyBlocked(looking: .forward), "buddy is front blocked")
+// assert(buddy.isReallyBlocked(looking: .right), "buddy is blocked on the right")
