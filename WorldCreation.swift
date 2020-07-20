@@ -1,7 +1,5 @@
-//  Ingredients:
-//  - 2 ridges
-//  - 1 river
-//  - 1 bridge
+import GameplayKit
+
 
 let grid = world.allPossibleCoordinates
 let rowSize = world.coordinates(inColumns: [0]).count
@@ -12,46 +10,48 @@ enum Horizon {
     case forward, left, right
 }
 
+func makeNoiseMap(columns: Int, rows: Int) -> GKNoiseMap {
+    let source = GKPerlinNoiseSource()
+    source.persistence = 0.2
+
+    let noise = GKNoise(source)
+    let size = vector2(1.0, 1.0)
+    let origin = vector2(0.0, 0.0)
+    let sampleCount = vector2(Int32(columns), Int32(rows))
+
+    return GKNoiseMap(noise, size: size, origin: origin, sampleCount: sampleCount, seamless: true)
+}
+
 struct HeightMap {
     let rows: Int, columns: Int
-    var grid: [Int]
-    let defaultHeight = 0
+    var grid: GKNoiseMap
     
     init(rows: Int, columns: Int) {
         self.rows = rows
         self.columns = columns
-        grid = Array(repeating: defaultHeight, count: rows * columns)
+        // grid = Array(repeating: defaultHeight, count: rows * columns)
+        grid = makeNoiseMap(columns: columns, rows: rows)
     }
     
     func indexIsValid(row: Int, column: Int) -> Bool {
         return row >= 0 && row < rows && column >= 0 && column < columns
     }
     
-    subscript(row: Int, column: Int) -> Int {
+    subscript(row: Int, column: Int) -> Float {
         get {
             assert(indexIsValid(row: row, column: column), "Index out of range")
-            return grid[(row * columns) + column]
-        }
-        set {
-            assert(indexIsValid(row: row, column: column), "Index out of range")
-            grid[(row * columns) + column] = newValue
+            let location = vector2(Int32(row), Int32(column))
+            return grid.value(at: location)
         }
     }
-    
-    var floor: Int {
-        grid.min() ?? defaultHeight
-    }
-    
-    var peak: Int {
-        grid.max() ?? defaultHeight
-    }
-    
+     
     func ascent(from pos1: Coordinate, to pos2: Coordinate) -> Int {
     
         assert(indexIsValid(row: pos1.row, column: pos1.column), "Index out of range for pos1")
         assert(indexIsValid(row: pos2.row, column: pos2.column), "Index out of range for pos2")
-        
-        return grid[pos2.row*rows+pos2.column] - grid[pos1.row*rows+pos1.column]
+        let location1 = vector2(Int32(pos1.row), Int32(pos1.column))
+        let location2 = vector2(Int32(pos2.row), Int32(pos2.column))
+        return Int(10*(grid.value(at: location2) - grid.value(at: location1)))
     }
                 
     func isOnWorldEdge(of side: Direction, at pos: Coordinate) -> Bool {
@@ -75,8 +75,12 @@ struct HeightMap {
     
     
     func isAtSeaLevel(at pos: Coordinate) -> Bool {
-        return grid[pos.row*rows+pos.column] == grid.min()
+        let location = vector2(Int32(pos.row), Int32(pos.column))      
+        return grid.value(at: location) < 0
     }
+    
+  
+    
 }
 
 struct Scout {
@@ -219,108 +223,31 @@ struct Scout {
 } // end struct Scout
 
 
-
-func makeValley(grid: [Coordinate], heights: HeightMap) {
-    
-    for pos in grid {
-        if heights.isAtSeaLevel(at: pos) {
-            world.removeAllBlocks(at: pos)
-            world.place(Water(), at: pos)
-        }
-        else {
-            for eachLevel in heights.floor ... heights[pos.row, pos.column] {
-                world.place(Block(), at: pos)
-            } 
-        }
+func makeRandomValley(grid: [Coordinate], heights: GKNoiseMap) {
+  for eachPosition in grid {
+    let location = vector2(Int32(eachPosition.row), Int32(eachPosition.column))
+    let height = heights.value(at: location)
+    if height < 0 {
+        world.removeAllBlocks(at: eachPosition)
+        world.place(Water(), at: eachPosition)
     }
-    
+    else {
+      for eachLevel in 0 ... Int32(height*10) {
+        world.place(Block(), at: eachPosition)
+      }
+    }
+  }
 }
 
-
-// designing the map
+// makeValley(grid: grid,heights: hmap)
 var hmap = HeightMap(rows: rowSize, columns: columnSize)
-hmap.grid =   [5,4,3,2,1,0,0,1,2,3,4,4]
-hmap.grid +=  [5,4,3,2,1,0,0,1,2,3,4,5]
-hmap.grid +=  [6,5,4,3,2,1,0,0,1,2,3,6]
-hmap.grid +=  [5,4,3,2,1,1,2,0,0,3,4,7]
-hmap.grid +=  [5,4,3,2,1,1,0,0,3,4,7,7]
-hmap.grid +=  [6,4,3,2,1,0,0,1,2,3,4,7]
-hmap.grid +=  [7,4,3,2,1,0,0,1,2,3,4,7]
-hmap.grid +=  [8,4,3,2,1,1,0,0,2,3,4,7]
-hmap.grid +=  [7,4,3,2,1,1,1,0,0,3,4,7]
-hmap.grid +=  [6,4,3,2,1,0,0,0,0,0,4,6]
-hmap.grid +=  [6,4,3,2,1,0,0,0,0,0,3,5]
-hmap.grid +=  [5,4,3,2,1,0,0,0,1,2,3,4]
-
-
-// initializing world elements
-
-makeValley(grid: grid,heights: hmap)
+makeRandomValley(grid: grid,heights: hmap.grid)
 
 var buddy = Scout(char: Character(name: .byte), at: Coordinate(column: 0, row: 0), facing: .north, knowing:hmap)
 
 
-// unit tests
 buddy.materialize()
-assert(buddy.position.row == 0 && buddy.position.column == 0, "buddy at 0,0")
-assert(buddy.orientation == .north, "buddy facing north")
-
-buddy.leap()
-assert(buddy.position.row == 1 && buddy.position.column == 0, "buddy jump forward northbound")
-assert(!buddy.isReallyBlocked(looking: .right), "buddy is not right blocked")
-assert(buddy.isReallyBlocked(looking: .left), "buddy is left blocked")
-
-buddy.turnRight()
-assert(buddy.orientation == .east, "buddy turn right eastward")
-
-
-buddy.turnLeft()
-assert(buddy.orientation == .north, "buddy facing north")
-buddy.turnLeft()
-assert(buddy.orientation == .west, "buddy facing west")
-assert(hmap.isOnWorldEdge(of: .west, at: buddy.position), "buddy is at the western edge of the map")
-assert(buddy.isReallyBlocked(looking: .forward), "buddy is front blocked")
-
-// testing adapted right-hand rule algorithm
-
-buddy.turnRight()
-buddy.leap()
-buddy.turnRight()
-buddy.leap()
-buddy.turnRight()
-buddy.leap()
-buddy.leap()
-assert(buddy.orientation == .south, "buddy is facing south")
-assert(buddy.position.column == 1 && buddy.position.row == 0, "expect (\(buddy.position.column),\(buddy.position.row)) to be (1,0)")
-assert(buddy.isReallyBlocked(looking: .forward), "buddy is front blocked")
-assert(!buddy.isReallyBlocked(looking: .left), "buddy is not blocked on the left")
-assert(!buddy.isReallyBlocked(looking: .right), "buddy is not blocked on the right")
-
-buddy.jumpAlongTheRightSide()    
-buddy.turnRight()
-assert(buddy.position.column == 0 && buddy.position.row == 0, "expect (\(buddy.position.column),\(buddy.position.row)) to be (0,0)")
-
-buddy.turnLeft()
-buddy.turnLeft()
 
 while true {
-    buddy.jumpAlongTheRightSide()    
+    buddy.jumpAlongTheRightSide()
 }
-
-// assertions after 4 steps
-// assert(buddy.position.column == 3, "buddy is on column 3")
-// assert(buddy.position.row == 0, "buddy is on row 0")
-// assert(buddy.orientation == .east, "buddy is facing east")
-// assert(!buddy.isReallyBlocked(looking: .forward), "buddy is not front blocked")
-// assert(buddy.isReallyBlocked(looking: .right), "buddy is blocked on the right")
-
-// buddy.jumpAlongTheRightSide()
-
-// assert(buddy.position.column == 4, "buddy is on column 4")
-// assert(buddy.position.row == 0, "buddy is on row 0")
-// assert(buddy.orientation == .east, "buddy is facing east")
-// let gradient = hmap.ascent(from: buddy.position, to: buddy.aim(step:1,facing: .east) )
-// assert(  abs(gradient) == 1, "ascent should be 1, not \(gradient)")
-
-// assert(buddy.isReallyBlocked(looking: .forward), "buddy is front blocked")
-// assert(buddy.isReallyBlocked(looking: .right), "buddy is blocked on the right")
