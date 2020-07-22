@@ -63,14 +63,15 @@ public struct HeightMap {
         }
     } 
     
-    
-    
     public func isAtSeaLevel(at pos: Coordinate) -> Bool {
         let location = vector2(Int32(pos.row), Int32(pos.column))      
         return grid.value(at: location) < 0
     }
     
-    
+    public func height(at pos: Coordinate) -> Float {
+      let location = vector2(Int32(pos.row), Int32(pos.column))      
+      return grid.value(at: location)
+    }
     
 }
 

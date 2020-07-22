@@ -1,15 +1,13 @@
 import Scout
 import HeightMap
-import GameplayKit
 
 let grid = world.allPossibleCoordinates
 let rowSize = world.coordinates(inColumns: [0]).count
 let columnSize = world.coordinates(inRows: [0]).count
 
-func makeRandomValley(grid: [Coordinate], heights: GKNoiseMap) {
+func makeRandomValley(grid: [Coordinate], heights: HeightMap) {
     for eachPosition in grid {
-        let location = vector2(Int32(eachPosition.row), Int32(eachPosition.column))
-        let height = heights.value(at: location)
+        let height = heights.height(at: eachPosition)
         if height < 0 {
             world.removeAllBlocks(at: eachPosition)
             world.place(Water(), at: eachPosition)
@@ -24,7 +22,7 @@ func makeRandomValley(grid: [Coordinate], heights: GKNoiseMap) {
 
 // makeValley(grid: grid,heights: hmap)
 var hmap = HeightMap(rows: rowSize, columns: columnSize)
-makeRandomValley(grid: grid,heights: hmap.grid)
+makeRandomValley(grid: grid,heights: hmap)
 
 var buddy = Scout(char: Character(name: .byte), at: Coordinate(column: 0, row: 0), facing: .north, knowing:hmap)
 
